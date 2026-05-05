@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  # === Backend 1: Ecommerce ===
+  ecommerce-service:
+    build: ./service1_ecommerce
+    container_name: ecommerce-service
+    ports:
+      - "8080:8080"
+    restart: always
+
+  # === Backend 2: Wallpaper ===
+  wallpaper-service:
+    build: ./service2_wallpaper
+    container_name: wallpaper-service
+    ports:
+      - "8081:8081"
+    restart: always
+
+  # === Frontend React App ===
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"   # or 3000:80 if using nginx
+    depends_on:
+      - ecommerce-service
+      - wallpaper-service
+    restart: always

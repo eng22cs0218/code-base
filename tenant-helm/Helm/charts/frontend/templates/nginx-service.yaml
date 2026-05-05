@@ -1,0 +1,17 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.nginx.service.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "frontend.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: nginx-proxy
+  ports:
+    - protocol: TCP
+      port: {{ .Values.nginx.service.port }}
+      targetPort: {{ .Values.nginx.service.targetPort }}
+  type: {{ .Values.nginx.service.type }}
+{{- end }}

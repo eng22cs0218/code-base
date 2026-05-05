@@ -1,0 +1,8 @@
+sed -i '' 's/        const reader = new FileReader();/        if (event.data instanceof ArrayBuffer) {/g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/        reader.onload = () => {/          term.write(new Uint8Array(event.data));/g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/          if (reader.result) {/          term.scrollToBottom();/g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/            term.write(new Uint8Array(reader.result as ArrayBuffer));/        }/g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/            term.scrollToBottom();/\/\//g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/          }/ /g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/        };/ /g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"
+sed -i '' 's/        reader.readAsArrayBuffer(event.data);/ /g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"

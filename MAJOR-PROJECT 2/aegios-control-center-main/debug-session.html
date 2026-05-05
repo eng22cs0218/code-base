@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Session Token</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+        }
+        .info { color: #0ff; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+    </style>
+</head>
+<body>
+    <h1>Session Token Debug</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        // Check localStorage
+        const sessionToken = localStorage.getItem('aegios_session_token');
+        const user = localStorage.getItem('aegios_user');
+        
+        output.innerHTML = `
+            <h2>LocalStorage Contents:</h2>
+            <p class="${sessionToken ? 'success' : 'error'}">
+                Session Token: ${sessionToken ? sessionToken.substring(0, 30) + '...' : 'NOT FOUND'}
+            </p>
+            <p class="${user ? 'success' : 'error'}">
+                User Data: ${user || 'NOT FOUND'}
+            </p>
+            
+            <h2>All LocalStorage Keys:</h2>
+            <pre>${JSON.stringify(Object.keys(localStorage), null, 2)}</pre>
+            
+            <h2>Test API Call:</h2>
+            <button onclick="testAPI()">Test Posture API</button>
+            <div id="api-result"></div>
+        `;
+        
+        window.testAPI = async function() {
+            const resultDiv = document.getElementById('api-result');
+            const token = localStorage.getItem('aegios_session_token');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<p class="error">No session token found!</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p class="info">Testing...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:8080/k8s/posture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_token: token })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ API Call Successful!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ API Call Failed: ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        };
+    </script>
+</body>
+</html>

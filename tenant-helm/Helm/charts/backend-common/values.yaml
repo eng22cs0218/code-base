@@ -1,0 +1,78 @@
+# Default values for backend-service chart
+# These are the base values that can be overridden by service-specific values
+
+# Service Configuration - MUST be overridden in environment values
+service:
+  # Service identity
+  name: "backend-service"           # Override with actual service name
+  appName: "backend-app"           # Override with actual app name  
+  namespace: "default"             # Override with service namespace
+  
+  # Container configuration
+  image:
+    repository: "aayush2703/backend-service"  # Override with actual image repository
+    # tag: "latest"                  # Override with service-specific tag
+    pullPolicy: Always
+  
+  # Port configuration
+  containerPort: 8000              # Override with actual container port
+  servicePort: 80                  # Standard service port
+  
+  # Health check paths - Override with service-specific paths
+  # healthCheck:
+  #   livenessPath: "/health"
+  #   readinessPath: "/health"
+  
+  # Deployment configuration
+  replicaCount: 1
+  
+  # Deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  
+  # Resource configuration - Override per service needs
+  resources:
+    requests:
+      memory: "10Mi"
+      cpu: "10m"
+    limits:
+      memory: "500Mi"
+      cpu: "200m"
+  
+  # Health check configuration
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  
+  # Init container configuration
+  initContainer:
+    enabled: true
+    image: busybox
+    command: ['sh', '-c', 'echo Init Container; sleep 5']
+  
+  # Labels and metadata
+  labels:
+    tier: Backend
+    version: "1.1.0.0"
+  
+  # Service configuration
+  serviceType: ClusterIP
+
+  # Node affinity configuration
+  # affinity: {}
+
+  # Tolerations configuration
+  # tolerations: []
+
+# Global settings
+global:
+  imageRegistry: "aayush2703"

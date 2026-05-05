@@ -1,0 +1,115 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github-pat-backend/authentication"
+	"github-pat-backend/github"
+	"github-pat-backend/handlers"
+	"github-pat-backend/kubernetes"
+	"github-pat-backend/pkg/database"
+	"github-pat-backend/pkg/logger"
+	"github-pat-backend/services/helm"
+
+	"github.com/joho/godotenv"
+)
+
+func main() {
+	// --------------------
+	// Load database config from environment variables
+	// --------------------
+	_ = godotenv.Load()
+
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	if dbHost == "" || dbPort == "" || dbUser == "" || dbPass == "" || dbName == "" {
+		log.Fatal("❌ Database environment variables are not set")
+	}
+
+	// --------------------
+	// Initialize PostgreSQL database
+	// --------------------
+	if err := database.InitDB(dbHost, dbPort, dbUser, dbPass, dbName); err != nil {
+		log.Fatal("❌ Failed to connect to database:", err)
+	}
+
+	// --------------------
+	// Setup routes
+	// --------------------
+	log := logger.New("monolith")
+	helmHandler := helm.NewHandler(log)
+
+	mux := http.NewServeMux()
+
+	// Auth & core routes (using authentication package)
+	mux.HandleFunc("/signup", authentication.Signup)
+	mux.HandleFunc("/login", authentication.Login)
+	mux.HandleFunc("/logout", authentication.Logout)
+	mux.HandleFunc("/logout-all", authentication.LogoutAll)
+	mux.HandleFunc("/dashboard", authentication.Dashboard)
+
+	// GitHub integration routes
+	mux.HandleFunc("/scan-files", github.ScanRepositoryFiles)
+	mux.HandleFunc("/github/files", github.GetFiles)
+
+	// Kubernetes resource routes
+	mux.HandleFunc("/process-k8s", handlers.ProcessKubernetesResources)
+	mux.HandleFunc("/k8s-resources", handlers.GetKubernetesResources)
+
+	// Kubernetes service routes
+	mux.HandleFunc("/k8s/posture", kubernetes.GetPosture)
+	mux.HandleFunc("/k8s/actions", kubernetes.GetActions)
+	mux.HandleFunc("/k8s/apply-action", kubernetes.ApplyAction)
+	mux.HandleFunc("/k8s/score", kubernetes.GetScore)
+
+	// Helm environment routes
+	mux.HandleFunc("/helm/environments", helmHandler.GetEnvironments)
+	mux.HandleFunc("/helm/render", helmHandler.RenderEnvironments)
+
+	// --------------------
+	// CORS Middleware
+	// --------------------
+	corsHandler := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Allow requests from frontend
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+
+			// Handle preflight requests
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// --------------------
+	// HTTP server configuration
+	// --------------------
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      corsHandler(mux),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// --------------------
+	// Start server
+	// --------------------
+	log.Info("Server running on http://localhost:8080")
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal("Server failed to start", err)
+	}
+}

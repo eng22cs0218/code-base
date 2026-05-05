@@ -1,0 +1,42 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "frontend.fullname" . }}-nginx-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "frontend.labels" . | nindent 4 }}
+data:
+  nginx.conf.template: |
+    events {}
+    http {
+        resolver ${DNS_RESOLVER} valid=10s ipv6=off;
+
+        server {
+            listen 80;
+
+            {{- range $key, $upstream := .Values.nginx.upstreams }}
+            # Route for {{ $key }}_service ({{ $upstream.location }} APIs)
+            location {{ $upstream.location }} {
+                set $backend "http://{{ $upstream.server }}";
+                rewrite ^{{ $upstream.location }}(.*)$ /$1 break;
+                proxy_pass $backend;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+            {{- end }}
+
+            # Serve React frontend for all other routes (MUST BE LAST)
+            location / {
+                proxy_pass http://frontend-svc.{{ .Values.global.namespace }}.svc.cluster.local:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+            }
+        }
+    }
+{{- end }}

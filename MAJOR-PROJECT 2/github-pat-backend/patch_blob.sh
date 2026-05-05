@@ -1,0 +1,1 @@
+sed -i '' 's/    wsRef.current = ws;/    ws.binaryType = "arraybuffer";\n    wsRef.current = ws;/g' "/Users/aayushsugandhi/learning/Parsing/MAJOR-PROJECT 2/aegios-control-center-main/src/components/security/AgentTerminal.tsx"

@@ -1,0 +1,56 @@
+# Development environment values for alerting-service
+# This file configures the backend-service chart specifically for alerting service
+
+service:
+  # Service alerting
+  name: "ecommerce-service"
+  appName: "ecommerce-app"
+  namespace: "ecommerce-ns"
+  
+  # Container Configuration
+  image:
+    repository: "aayush2703/ecommerce-service"
+    tag: "latest"              # Service-specific tag
+    pullPolicy: Always          # Always pull for dev environment
+  
+  # Port Configuration
+  containerPort: 8080           # Port exposed in Dockerfile
+  servicePort: 80               # Standard service port
+  # Service Annotations (enable Prometheus scraping via dynamic job)
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+    prometheus.io/scheme: "http"
+  
+  # Health Check Configuration
+  healthCheck:
+    livenessPath: "/health"     # ecommerce service health endpoint
+    readinessPath: "/health"    # Same for readiness
+  
+  # Resource Configuration (from your manifest)
+  resources:
+    requests:
+      memory: "10Mi"           # Specific to ecommerce service
+      cpu: "10m"               # Specific to ecommerce service
+    limits:
+      memory: "100Mi"          # Specific to ecommerce service
+      cpu: "100m"               # Specific to ecommerce service
+  
+  # Dev environment specific settings
+  replicaCount: 1               # Single replica for dev
+  
+  # Faster health checks for development
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 90     # Faster for dev
+    periodSeconds: 30            # More frequent for dev
+    timeoutSeconds: 5
+  
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 90      # Faster for dev
+    periodSeconds: 30            # More frequent for dev
+    timeoutSeconds: 5
+
+   

@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: aegios-db
+    environment:
+      POSTGRES_USER: aayushsugandhi
+      POSTGRES_PASSWORD: aayushsugandhi
+      POSTGRES_DB: aegios
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aayushsugandhi -d aegios"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./github-pat-backend
+      dockerfile: Dockerfile
+    container_name: aegios-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=aayushsugandhi
+      - DB_PASSWORD=aayushsugandhi
+      - DB_NAME=aegios
+      - PORT=8080
+      - FRONTEND_URL=https://aegios.co.in
+      # Note: VITE_API_BASE_URL for frontend should be the PUBLIC URL of this backend (localhost:8080)
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./aegios-control-center-main
+      dockerfile: Dockerfile
+    container_name: aegios-frontend
+    ports:
+      - "8082:8081"
+    environment:
+      - VITE_API_BASE_URL=https://aegios.co.in/api
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+

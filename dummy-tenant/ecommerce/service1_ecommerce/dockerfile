@@ -1,0 +1,26 @@
+FROM golang:1.23-alpine AS builder
+
+# Enable CGO and install compiler tools
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Enable CGO so sqlite3 can compile
+ENV CGO_ENABLED=1
+
+# Build your app dynamically linked
+RUN go build -o ecommerce .
+
+# Runtime stage
+FROM alpine:latest
+RUN apk add --no-cache sqlite-libs
+WORKDIR /app
+COPY --from=builder /app/ecommerce .
+COPY ecommerce.db .
+
+EXPOSE 8080
+CMD ["./ecommerce"]

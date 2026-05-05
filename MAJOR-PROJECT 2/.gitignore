@@ -1,0 +1,19 @@
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Secrets and Environment
+.env
+.env.*
+!.env.example
+
+# Temporary and Sub-repo files
+Untitled document.txt
+kube-connect-script/

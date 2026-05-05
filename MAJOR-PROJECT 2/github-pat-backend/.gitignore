@@ -1,0 +1,48 @@
+# Binaries
+*.exe
+*.exe~
+server
+main
+auth-service
+github-service
+k8s-service
+findings-service
+organization-service
+helm-service
+api-gateway
+test_build
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Files
+*.sql
+*.bat
+*.ps1
+!test_complete_flow.bat
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+*.test
+*.out
+vendor/
+go.sum_
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml

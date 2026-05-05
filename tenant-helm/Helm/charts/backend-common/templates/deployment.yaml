@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.service.name }}-deployment
+  namespace: {{ .Values.service.namespace }}
+  labels:
+    {{- with .Values.service.labels }}
+    tier: {{ .tier }}
+    version: {{ .version | quote }}
+    {{- end }}
+    {{- include "backend-service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.service.replicaCount }}
+  {{- with .Values.service.strategy }}
+  strategy:
+    type: {{ .type }}
+    {{- if eq .type "RollingUpdate" }}
+    rollingUpdate:
+      maxUnavailable: {{ .rollingUpdate.maxUnavailable }}
+      maxSurge: {{ .rollingUpdate.maxSurge }}
+    {{- end }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Values.service.appName }}
+      {{- include "backend-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      name: {{ .Values.service.appName }}
+      labels:
+        app: {{ .Values.service.appName }}
+        {{- include "backend-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.service.initContainer.enabled }}
+      initContainers:
+      - name: my-init-container
+        image: {{ .Values.service.initContainer.image }}
+        command: {{ .Values.service.initContainer.command | toJson }}
+      {{- end }}
+      containers:
+      - name: {{ .Values.service.appName }}
+        image: "{{ .Values.service.image.repository }}:{{ .Values.service.image.tag }}"
+        imagePullPolicy: {{ .Values.service.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.containerPort }}
+        {{- if .Values.service.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.service.healthCheck.livenessPath }}
+            port: {{ .Values.service.containerPort }}
+          initialDelaySeconds: {{ .Values.service.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.service.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.service.livenessProbe.timeoutSeconds }}
+        {{- end }}
+        {{- if .Values.service.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.service.healthCheck.readinessPath }}
+            port: {{ .Values.service.containerPort }}
+          initialDelaySeconds: {{ .Values.service.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.service.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.service.readinessProbe.timeoutSeconds }}
+        {{- end }}
+        {{- with .Values.service.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.service.env }}
+        env:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.service.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.service.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

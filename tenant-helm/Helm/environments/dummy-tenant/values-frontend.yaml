@@ -1,0 +1,94 @@
+# Development environment specific values for frontend chart
+# This file overrides the default values.yaml for dev environment
+
+# Global settings for dev environment
+global:
+  namespace: "frontend-ns"  # Use frontend-ns namespace for dev
+
+# Frontend Application Configuration for Dev
+frontend:
+  enabled: true
+  replicaCount: 2  # two replica for dev
+  
+  image:
+    repository: "aayush2703/frontend"
+    tag: "latest"  # Service-specific tag
+    pullPolicy: Always  # Always pull for dev to get latest changes
+  
+  # Reduced resources for dev environment
+  resources:
+    requests:
+      memory: "10Mi"  # Reduced for dev
+      cpu: "25m"       # Reduced for dev
+    limits:
+      memory: "10Mi"    # Reduced for dev
+      cpu: "20m"      # Reduced for dev
+  
+  # Faster health checks for dev
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 15  # Faster startup for dev
+    periodSeconds: 5         # More frequent checks for dev
+  
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 5   # Faster startup for dev
+    periodSeconds: 5         # More frequent checks for dev
+
+# Nginx Configuration for Dev Environment
+nginx:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: nginx
+    tag: "alpine"  # Use lighter alpine version for dev
+    pullPolicy: Always
+  
+  # Reduced resources for dev
+  resources:
+    requests:
+      cpu: "10m"
+      memory: "5Mi"
+    limits:
+      cpu: "500m"
+      memory: "600Mi"
+  
+  # Production environment upstream services with dynamic DNS resolution
+  upstreams:
+    wallpaper:
+      server: wallpaper-service.dummy-tenant.svc.cluster.local:80
+      location: "/api/v1/wallpaper/"
+    
+    ecommerce:
+      server: ecommerce-service.dummy-tenant.svc.cluster.local:80
+      location: "/api/v1/ecommerce/"
+
+# HTTPRoute Configuration
+httproute:
+  enabled: true
+  # Gateway API configuration
+  gateway:
+    name: gateway
+    namespace: infra
+    # Use both HTTP and HTTPS listeners
+    # HTTP is needed for Let's Encrypt HTTP-01 challenge validation
+    # HTTPS is for actual application traffic
+    sectionNames:
+      - https
+      - http
+  hosts:
+    - host: "cloudvibe.xyz"
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: nginx-service
+              port: 80

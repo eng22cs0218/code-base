@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #3a3a3a;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        .result {
+            background: #1a1a1a;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            border-color: #00aa00;
+            color: #00ff00;
+        }
+        .error {
+            border-color: #aa0000;
+            color: #ff6666;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            color: #fff;
+            border-radius: 4px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 Aegios API Connection Test</h1>
+    <p>Test the connection between frontend and backend</p>
+
+    <div class="test-section">
+        <h2>1. Test CORS</h2>
+        <button onclick="testCORS()">Test CORS Headers</button>
+        <div id="cors-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Login</h2>
+        <label>GitHub Username:</label>
+        <input type="text" id="username" value="aayush270304" />
+        <label>Password:</label>
+        <input type="password" id="password" value="2143253" />
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Security Posture</h2>
+        <label>Session Token (from login):</label>
+        <input type="text" id="session-token" placeholder="Paste session token here" />
+        <button onclick="testPosture()">Test Posture API</button>
+        <div id="posture-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test Security Score</h2>
+        <button onclick="testScore()">Test Score API</button>
+        <div id="score-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+
+        async function testCORS() {
+            const resultDiv = document.getElementById('cors-result');
+            resultDiv.textContent = 'Testing CORS...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'OPTIONS',
+                });
+                
+                const headers = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                };
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ CORS is working!\n\n' + JSON.stringify(headers, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ CORS Error:\n' + error.message;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            resultDiv.textContent = 'Testing login...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        github_username: username,
+                        password: password,
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store session token for other tests
+                    document.getElementById('session-token').value = data.session_token;
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ Login successful!\n\n' + JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ Login failed:\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error:\n' + error.message;
+            }
+        }
+
+        async function testPosture() {
+            const resultDiv = document.getElementById('posture-result');
+            const sessionToken = document.getElementById('session-token').value;
+            
+            if (!sessionToken) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please login first to get a session token';
+                return;
+            }
+            
+            resultDiv.textContent = 'Testing posture API...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/k8s/posture`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_token: sessionToken,
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ Posture API working!\n\n' + 
+                        `Total Resources: ${data.total_resources}\n` +
+                        `Total Issues: ${data.total_issues}\n` +
+                        `Critical: ${data.critical}\n` +
+                        `High: ${data.high}\n` +
+                        `Medium: ${data.medium}\n` +
+                        `Low: ${data.low}\n\n` +
+                        JSON.stringify(data.resources, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ Posture API failed:\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error:\n' + error.message;
+            }
+        }
+
+        async function testScore() {
+            const resultDiv = document.getElementById('score-result');
+            const sessionToken = document.getElementById('session-token').value;
+            
+            if (!sessionToken) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please login first to get a session token';
+                return;
+            }
+            
+            resultDiv.textContent = 'Testing score API...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/k8s/score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_token: sessionToken,
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ Score API working!\n\n' + 
+                        `Total Resources: ${data.total_resources}\n` +
+                        `Overall Score: ${data.overall_score}/${data.max_possible_score}\n` +
+                        `Percentage: ${data.overall_percentage.toFixed(2)}%\n` +
+                        `Grade: ${data.overall_grade}\n` +
+                        `Status: ${data.compliance_status}\n\n` +
+                        JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ Score API failed:\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error:\n' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

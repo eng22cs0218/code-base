@@ -1,0 +1,80 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- with .Values.frontend.labels }}
+    tier: {{ .tier }}
+    version: {{ .version | quote }}
+    {{- end }}
+    {{- include "frontend.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  revisionHistoryLimit: {{.Values.frontend.revisionHistoryLimit}}
+  {{- with .Values.frontend.strategy }}
+  strategy:
+    type: {{ .type }}
+    {{- if eq .type "RollingUpdate" }}
+    rollingUpdate:
+      maxUnavailable: {{ .rollingUpdate.maxUnavailable }}
+      maxSurge: {{ .rollingUpdate.maxSurge }}
+    {{- end }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "frontend.name" . }}-app
+      {{- include "frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      name: {{ include "frontend.name" . }}-app
+      labels:
+        app: {{ include "frontend.name" . }}-app
+        {{- include "frontend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.frontend.initContainer.enabled }}
+      initContainers:
+      - name: my-init-container
+        image: {{ .Values.frontend.initContainer.image }}
+        command: {{ .Values.frontend.initContainer.command | toJson }}
+      {{- end }}
+      containers:
+      - name: {{ include "frontend.name" . }}-app
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.service.targetPort }}
+        {{- if .Values.frontend.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.frontend.livenessProbe.httpGet.path }}
+            port: {{ .Values.frontend.livenessProbe.httpGet.port }}
+          initialDelaySeconds: {{ .Values.frontend.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.frontend.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.frontend.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.frontend.readinessProbe.httpGet.path }}
+            port: {{ .Values.frontend.readinessProbe.httpGet.port }}
+          initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.frontend.readinessProbe.periodSeconds }}
+        {{- end }}
+        {{- with .Values.frontend.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.frontend.env }}
+        env:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.frontend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.frontend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

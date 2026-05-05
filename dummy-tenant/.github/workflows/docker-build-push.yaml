@@ -1,0 +1,94 @@
+name: Build & Push Services
+
+on:
+  # Auto trigger on main branch push (only for code changes)
+  push:
+    branches:
+      - main
+    paths:
+      - 'ecommerce/**'
+
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Which service do you want to build?"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - frontend
+          - backend1
+          - backend2
+
+jobs:
+  docker-build-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️ Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️ Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 2.5️ Delete old images
+      - name: Delete old Docker images
+        continue-on-error: true
+        run: |
+          # Get Docker Hub token
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d '{"username": "'${{ secrets.DOCKER_USERNAME }}'", "password": "'${{ secrets.DOCKER_PASSWORD }}'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Delete latest tag from each repository
+          echo "🗑️ Deleting old images..."
+          curl -X DELETE -H "Authorization: JWT ${TOKEN}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/frontend/tags/latest/" 2>/dev/null || true
+          curl -X DELETE -H "Authorization: JWT ${TOKEN}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/ecommerce-service/tags/latest/" 2>/dev/null || true
+          curl -X DELETE -H "Authorization: JWT ${TOKEN}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/wallpaper-service/tags/latest/" 2>/dev/null || true
+          echo "✅ Old images deleted!"
+
+      # 3️ Build & Push Frontend
+      - name: Build & Push Frontend
+        if: github.event_name == 'push' || github.event.inputs.service == 'all' || github.event.inputs.service == 'frontend'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecommerce/frontend
+          file: ./ecommerce/frontend/dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.sha }}
+
+      # 4️ Build & Push Ecommerce Service
+      - name: Build & Push Ecommerce Service
+        if: github.event_name == 'push' || github.event.inputs.service == 'all' || github.event.inputs.service == 'backend1'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecommerce/service1_ecommerce
+          file: ./ecommerce/service1_ecommerce/dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/ecommerce-service:latest
+            ${{ secrets.DOCKER_USERNAME }}/ecommerce-service:${{ github.sha }}
+
+      # 5️ Build & Push Wallpaper Service
+      - name: Build & Push Wallpaper Service
+        if: github.event_name == 'push' || github.event.inputs.service == 'all' || github.event.inputs.service == 'backend2'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecommerce/service2_wallpaper
+          file: ./ecommerce/service2_wallpaper/dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/wallpaper-service:latest
+            ${{ secrets.DOCKER_USERNAME }}/wallpaper-service:${{ github.sha }}
